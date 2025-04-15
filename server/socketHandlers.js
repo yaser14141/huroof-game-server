@@ -97,10 +97,6 @@ function handlePlayerRegister(socket) {
   };
 }
 
-// باقي الكود كما هو
-
-module.exports = { registerSocketHandlers };
-
 /**
  * معالج جلب قائمة الغرف
  */
