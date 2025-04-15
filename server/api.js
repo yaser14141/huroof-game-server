@@ -4,7 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
-const { generateHexGrid, shuffleHexGrid } = require('./utils/gameHelpers');
+const { generateHexGrid, shuffleHexGrid } = require('./gameHelpers');
 const config = require('../config');
 const verifyToken = require('../middleware/verifyToken');
 
