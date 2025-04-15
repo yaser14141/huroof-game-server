@@ -7,7 +7,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const config = require('./config');
-const apiRoutes = require('./routes/api');
+const apiRoutes = require('./api');
 const { registerSocketHandlers } = require('./utils/socketHandlers');
 
 // إنشاء تطبيق Express
