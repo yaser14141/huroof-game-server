@@ -62,25 +62,92 @@ function registerSocketHandlers(io) {
 /**
  * معالج تسجيل اللاعب
  */
+// utils/socketHandlers.js
+// معالجات الأحداث لـ Socket.IO
+
+const { v4: uuidv4 } = require('uuid');
+const config = require('./config');
+const { generateHexGrid, shuffleHexGrid, updateTeamColors, checkWinCondition } = require('./gameHelpers');
+
+// تخزين بيانات الغرف واللاعبين
+const rooms = {};
+const players = {};
+
+/**
+ * تسجيل معالجات الأحداث لـ Socket.IO
+ * @param {Object} io كائن Socket.IO
+ */
+function registerSocketHandlers(io) {
+  io.on('connection', (socket) => {
+    console.log(`مستخدم جديد متصل: ${socket.id}`);
+
+    // تسجيل اللاعب
+    socket.on('player:register', handlePlayerRegister(socket));
+
+    // جلب قائمة الغرف
+    socket.on('rooms:get', handleGetRooms(socket));
+
+    // إنشاء غرفة جديدة
+    socket.on('room:create', handleCreateRoom(socket, io));
+
+    // الانضمام إلى غرفة
+    socket.on('room:join', handleJoinRoom(socket, io));
+
+    // مغادرة الغرفة
+    socket.on('room:leave', handleLeaveRoom(socket, io));
+
+    // توزيع اللاعبين على الفرق
+    socket.on('teams:assign', handleAssignTeams(socket, io));
+
+    // توزيع اللاعبين على الفرق بشكل عشوائي
+    socket.on('teams:random', handleRandomTeams(socket, io));
+
+    // بدء اللعبة
+    socket.on('game:start', handleStartGame(socket, io));
+
+    // إعادة ترتيب الحروف
+    socket.on('game:shuffle', handleShuffleGame(socket, io));
+
+    // تغيير ألوان الفرق
+    socket.on('game:colors', handleChangeColors(socket, io));
+
+    // إعلان الفوز
+    socket.on('game:win', handleAnnounceWin(socket, io));
+
+    // قطع الاتصال
+    socket.on('disconnect', handleDisconnect(socket, io));
+  });
+
+  global.rooms = rooms;
+  global.players = players;
+}
+
 function handlePlayerRegister(socket) {
   return (userData, callback) => {
     try {
       const playerId = userData.id || socket.id;
-      
-      // تخزين بيانات اللاعب
+      const username = userData.username?.trim();
+
+      if (!username || username.length < 3) {
+        return callback({ error: 'الاسم يجب أن لا يقل عن 3 أحرف' });
+      }
+
+      const isNameTaken = Object.values(players).some(p => p.username === username);
+      if (isNameTaken) {
+        return callback({ error: 'اسم المستخدم مستخدم بالفعل' });
+      }
+
       players[playerId] = {
         id: playerId,
         socketId: socket.id,
-        username: userData.username,
+        username,
         status: 'online',
         team: null,
         room: null,
         createdAt: new Date().toISOString()
       };
-      
-      console.log(`تم تسجيل اللاعب: ${userData.username} (${playerId})`);
-      
-      // إرسال تأكيد التسجيل
+
+      console.log(`تم تسجيل اللاعب: ${username} (${playerId})`);
       callback({ success: true, player: players[playerId] });
     } catch (error) {
       console.error('خطأ في تسجيل اللاعب:', error);
@@ -88,6 +155,10 @@ function handlePlayerRegister(socket) {
     }
   };
 }
+
+// باقي الكود كما هو
+
+module.exports = { registerSocketHandlers };
 
 /**
  * معالج جلب قائمة الغرف
