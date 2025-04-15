@@ -547,17 +547,92 @@ function handleShuffleGame(socket, io) {
   return (data, callback) => {
     try {
       const { roomId } = data;
-      
-      // التحقق من وجود الغرفة
-      if (!rooms[roomId]) {
-        return callback({ error: 'الغرفة غير موجودة' });
-      }
-      
-      // التحقق من حالة اللعبة
-      if (rooms[roomId].gameState.status !== 'playing') {
-        return callback({ error: 'اللعبة ليست قيد التقدم' });
-      }
-      
-      // إعادة ترتيب الحروف
-      rooms[roomId].g
-(Content truncated due to size limit. Use line ranges to read in chunks)
+      if (!rooms[roomId]) return callback({ error: 'الغرفة غير موجودة' });
+      if (rooms[roomId].gameState.status !== 'playing') return callback({ error: 'اللعبة ليست قيد التقدم' });
+
+      const newGrid = shuffleHexGrid(
+        rooms[roomId].gameState.hexGrid,
+        config.game.arabicLetters
+      );
+
+      rooms[roomId].gameState.hexGrid = newGrid;
+      io.to(roomId).emit('game:state', rooms[roomId].gameState);
+      callback({ success: true, hexGrid: newGrid });
+    } catch (error) {
+      console.error('خطأ في إعادة ترتيب الحروف:', error);
+      callback({ error: 'حدث خطأ أثناء إعادة الترتيب' });
+    }
+  };
+}
+
+function handleChangeColors(socket, io) {
+  return (data, callback) => {
+    try {
+      const { roomId, colors } = data;
+      if (!rooms[roomId]) return callback({ error: 'الغرفة غير موجودة' });
+
+      rooms[roomId].teamColors = colors;
+      io.to(roomId).emit('game:colors', colors);
+      callback({ success: true });
+    } catch (error) {
+      console.error('خطأ في تغيير ألوان الفرق:', error);
+      callback({ error: 'حدث خطأ أثناء تغيير الألوان' });
+    }
+  };
+}
+
+function handleAnnounceWin(socket, io) {
+  return (data, callback) => {
+    try {
+      const { roomId, winnerTeam } = data;
+      if (!rooms[roomId]) return callback({ error: 'الغرفة غير موجودة' });
+
+      rooms[roomId].gameState.status = 'finished';
+      rooms[roomId].gameState.winner = winnerTeam;
+
+      io.to(roomId).emit('game:win', { winner: winnerTeam });
+      callback({ success: true });
+    } catch (error) {
+      console.error('خطأ في إعلان الفوز:', error);
+      callback({ error: 'حدث خطأ أثناء إعلان الفوز' });
+    }
+  };
+}
+
+function handleDisconnect(socket, io) {
+  try {
+    const playerId = socket.id;
+    const player = players[playerId];
+    if (!player) return;
+    const roomId = player.room;
+
+    if (roomId && rooms[roomId]) {
+      rooms[roomId].players = rooms[roomId].players.filter(p => p.id !== playerId);
+      rooms[roomId].teams.team1 = rooms[roomId].teams.team1.filter(id => id !== playerId);
+      rooms[roomId].teams.team2 = rooms[roomId].teams.team2.filter(id => id !== playerId);
+      io.to(roomId).emit('player:left', playerId);
+      if (rooms[roomId].players.length === 0) delete rooms[roomId];
+    }
+
+    delete players[playerId];
+    updateRoomsList(io);
+  } catch (error) {
+    console.error('خطأ في قطع الاتصال:', error);
+  }
+}
+
+function updateRoomsList(io) {
+  const roomsList = Object.values(rooms).map(room => ({
+    id: room.id,
+    name: room.name,
+    type: room.type,
+    hostName: room.hostName,
+    maxPlayers: room.maxPlayers,
+    players: room.players.length,
+    gameState: { status: room.gameState.status },
+    createdAt: room.createdAt
+  }));
+  io.emit('rooms:list', roomsList);
+}
+
+module.exports = { registerSocketHandlers };
