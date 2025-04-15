@@ -2,7 +2,7 @@
 // معالجات الأحداث لـ Socket.IO
 
 const { v4: uuidv4 } = require('uuid');
-const config = require('../config');
+const config = require('./config');
 const { generateHexGrid, shuffleHexGrid, updateTeamColors, checkWinCondition } = require('./gameHelpers');
 
 // تخزين بيانات الغرف واللاعبين
