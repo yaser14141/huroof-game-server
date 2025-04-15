@@ -8,7 +8,7 @@ const cors = require('cors');
 const path = require('path');
 const config = require('./config');
 const apiRoutes = require('./api');
-const { registerSocketHandlers } = require('./utils/socketHandlers');
+const { registerSocketHandlers } = require('./socketHandlers');
 
 // إنشاء تطبيق Express
 const app = express();
